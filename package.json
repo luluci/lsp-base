@@ -1,0 +1,57 @@
+{
+	"name": "lsp-base",
+	"displayName": "lsp-base",
+	"description": "Language Server Sample Extension",
+	"version": "0.0.1",
+	"publisher": "hoge",
+	"license": "SEE LICENSE IN LICENSE",
+	"galleryBanner": {
+		"color": "#FFFFFF",
+		"theme": "light"
+	},
+	"engines": {
+		"vscode": "^1.40.0"
+	},
+	"categories": [
+		"Linters",
+		"Formatters"
+	],
+	"activationEvents": [
+		"onLanguage:plaintext",
+		"onLanguage:markdown"
+	],
+	"main": "./client/out/extension",
+	"contributes": {
+		"configuration": {
+			"title": "lsp-base",
+			"properties": {
+				"lspbase.path.input": {
+					"type": "string",
+					"default": "test",
+					"description": "入力ファイルのある場所"
+				}
+			}
+		}
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run webpack",
+		"webpack": "npm run clean && webpack --mode production --config ./client/webpack.config.js && webpack --mode production --config ./server/webpack.config.js",
+		"webpack:dev": "npm run clean && webpack --mode none --config ./client/webpack.config.js && webpack --mode none --config ./server/webpack.config.js",
+		"compile": "tsc -b",
+		"compile:client": "tsc -b ./client/tsconfig.json",
+		"compile:server": "tsc -b ./server/tsconfig.json",
+		"watch": "tsc -b -w",
+		"clean": "rimraf client/out && rimraf server/out",
+		"postinstall": "cd client && npm install && cd ../server && npm install && cd .."
+	},
+	"devDependencies": {
+		"@types/node": "^13.11.0",
+		"merge-options": "^2.0.0",
+		"rimraf": "^3.0.2",
+		"ts-loader": "^6.2.2",
+		"typescript": "^3.8.3",
+		"webpack": "^4.42.1",
+		"webpack-cli": "^3.3.11",
+		"eslint": "^6.8.0"
+	}
+}

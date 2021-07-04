@@ -1,0 +1,17 @@
+{
+	"name": "client",
+	"displayName": "lsp-base",
+	"description": "",
+	"version": "0.0.1",
+	"private": true,
+	"license": "MIT",
+	"engines": {
+		"vscode": "^1.43.0"
+	},
+	"devDependencies": {
+		"@types/vscode": "1.43.0"
+	},
+	"dependencies": {
+		"vscode-languageclient": "6.1.3"
+	}
+}
