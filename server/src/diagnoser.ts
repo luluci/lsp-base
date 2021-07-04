@@ -6,6 +6,9 @@ import {
 } from "vscode-languageserver";
 import { URI } from 'vscode-uri';
 
+//import { config } from './config';
+
+
 export class WorkspaceInfo {
 	public rootPath: URI;
 

@@ -17,3 +17,5 @@ export class Config {
 		return result;
 	}
 }
+
+export let config = new Config();

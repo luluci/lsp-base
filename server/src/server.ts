@@ -16,7 +16,7 @@ import {
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { Diagnoser } from './diagnoser';
-import { Config } from './config';
+import { config } from './config';
 
 namespace CommandIDs {
 	export const fix = "sample.fix";
@@ -33,7 +33,6 @@ let hasWorkspaceFolderCapability: boolean = false;
 let hasDiagnosticRelatedInformationCapability: boolean = false;
 
 let diagnoser = new Diagnoser();
-let config = new Config();
 
 connection.onInitialize((params: InitializeParams) => {
 	let capabilities = params.capabilities;
@@ -67,20 +66,6 @@ connection.onInitialize((params: InitializeParams) => {
 });
 
 connection.onInitialized(() => {
-	connection.workspace.getWorkspaceFolders().then((ws) => {
-		if (ws) {
-			diagnoser.initWorkspaces(ws);
-			update();
-		}
-	});
-	connection.workspace.getConfiguration().then((value) => {
-		if (value) {
-			//value: vscode.WorkspaceConfiguration;
-			config.init(value);
-			update();
-		}
-	});
-
 	if (hasConfigurationCapability) {
 		connection.client.register(
 			DidChangeConfigurationNotification.type,
@@ -95,9 +80,32 @@ connection.onInitialized(() => {
 		});
 	}
 	if (hasDiagnosticRelatedInformationCapability) {
-
 	}
+
+	initExtInfo();
 });
+
+async function initExtInfo () {
+	// configuration取得
+	if (hasConfigurationCapability) {
+		const conf = await connection.workspace.getConfiguration();
+		if (conf) {
+			//value: vscode.WorkspaceConfiguration;
+			config.init(conf);
+		}
+	}
+	// Workspaceを現在フォルダで初期化
+	if (hasWorkspaceFolderCapability) {
+		const wss = await connection.workspace.getWorkspaceFolders();
+		if (wss) {
+			diagnoser.initWorkspaces(wss);
+		}
+	} else {
+		// Workspaceの設定が無い場合？　何かで初期化しないと
+	}
+
+	update();
+}
 
 connection.onDidChangeConfiguration((change) => {
 	if (change.settings) {
