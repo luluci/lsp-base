@@ -1,19 +1,19 @@
 
 
 export class Config {
-	private _inputPath: string;
+	public inputPath: string;
 	
 	constructor() {
-		this._inputPath = "";
+		this.inputPath = "";
 	}
 
 	public init(conf: any) {
-		this._inputPath = conf.lspbase.path.input;
+		this.inputPath = conf.lspbase.path.input;
 	}
 
 	public getConf(): string {
 		let result: string = "conf:";
-		result += this._inputPath;
+		result += this.inputPath;
 		return result;
 	}
 }

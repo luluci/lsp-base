@@ -27,7 +27,7 @@
 			"properties": {
 				"lspbase.path.input": {
 					"type": "string",
-					"default": "test",
+					"default": "hoge_analyzer",
 					"description": "入力ファイルのある場所"
 				}
 			}

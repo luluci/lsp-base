@@ -82,7 +82,10 @@ connection.onInitialized(() => {
 	if (hasDiagnosticRelatedInformationCapability) {
 	}
 
+	// 拡張機能周りの設定を初期化
 	initExtInfo();
+	// 入力ファイルを読み込み開始
+	
 });
 
 async function initExtInfo () {
