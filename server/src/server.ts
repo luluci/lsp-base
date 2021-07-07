@@ -4,11 +4,11 @@
 import {
 	CodeActionKind,
 	createConnection,
-	Diagnostic,
-	DiagnosticSeverity,
+//	Diagnostic,
+//	DiagnosticSeverity,
 	ProposedFeatures,
 	InitializeParams,
-	Range,
+//	Range,
 	TextDocuments,
 	TextDocumentSyncKind,
 	DidChangeConfigurationNotification,
@@ -130,12 +130,17 @@ function update() {
  * Analyzes the text document for problems.
  * @param doc text document to analyze
  */
-function validate(doc: TextDocument) {
+async function validate(doc: TextDocument) {
+	/*
 	const diagnostics: Diagnostic[] = [];
 	const range: Range = {start: {line: 0, character: 0},
 						  end: {line: 0, character: Number.MAX_VALUE}};
 	diagnostics.push(Diagnostic.create(range, `Hello world in ${diagnoser.getWSListStr()} ${config.getConf()}`, DiagnosticSeverity.Warning, "", "lsp-base"));
-	connection.sendDiagnostics({ uri: doc.uri, diagnostics });
+	*/
+	const diagnostics = await diagnoser.validate(doc);
+	if (diagnostics) {
+		connection.sendDiagnostics({ uri: doc.uri, diagnostics });
+	}
 }
 
 documents.listen(connection);

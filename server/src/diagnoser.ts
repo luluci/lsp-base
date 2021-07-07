@@ -3,30 +3,85 @@
 import * as fs from 'fs';
 import { posix } from 'path';
 import {
+	Diagnostic,
+	DiagnosticSeverity,
+	Range,
 	WorkspaceFolder,
 	WorkspaceFoldersChangeEvent,
 } from "vscode-languageserver";
+import { TextDocument } from "vscode-languageserver-textdocument";
 import { URI } from 'vscode-uri';
 
 import { config } from './config';
 
 
+class DiagnosNode {
+	public line?: number;
+	public start?: number;
+	public end?: number;
+	public message?: string;
+
+	constructor(line: string) {
+		const parts = line.split('\t');
+		if (parts.length >= 3) {
+			this.line = parseInt(parts[0], 10);
+			this.start = parseInt(parts[1], 10);
+			this.end = this.start;
+			this.message = parts[2];
+		}
+	}
+}
+
+
 class FileInfo {
 	public absPath: string;
 	public relPath: string;
+	public data: string;
+	public diagnos: Map<number, DiagnosNode>;
 	// 
 	private _isLoading: Promise<void>;
 
 	constructor(absPath:string, relPath:string) {
 		this.absPath = absPath;
 		this.relPath = relPath;
+		this.data = '';
+		this.diagnos = new Map<number, DiagnosNode>();
 		//
-		this._isLoading = Promise.resolve();
+		this._isLoading = this._readInput();
+	}
+
+	private async _readInput() {
+		const self = this;
+		fs.readFile(this.absPath, { encoding:'utf8' }, (err,data)=>{
+			if (err) {
+				//
+				throw err;
+			} else {
+				// tsv解析
+				const lines = data.split(/\r\n|\n/);
+				for (const line of lines) {
+					const diag = new DiagnosNode(line);
+					if (diag.line) {
+						self.diagnos.set(diag.line, diag);
+					}
+				}
+			}
+		});
 	}
 
 	public async getDiagnostic() {
 		// 入力ファイルの読み込みが終わったらDiagnosticを作成する
 		await this._isLoading;
+		//
+		const diagnostics: Diagnostic[] = [];
+		for (const diag of this.diagnos) {
+			const range: Range = {
+				start: { line: diag[1].line!, character: diag[1].start! },
+				end: { line: diag[1].line!, character: diag[1].end! }
+			};
+			diagnostics.push(Diagnostic.create(range, diag[1].message!, DiagnosticSeverity.Warning, "", "lsp-base"));
+		}
+		return diagnostics;
 	}
 }
 
@@ -70,16 +125,34 @@ export class WorkspaceInfo {
 			for (const dirent of dirents) {
 				// 相対パスと絶対パスを作成
 				const newrel = posix.join(basedir, dirent.name);
-				const newpath = posix.join(this.inputPath.fsPath, newrel)
+				const newpath = posix.join(this.inputPath.fsPath, newrel);
+				const key = posix.join(basedir, posix.basename(dirent.name, posix.extname(dirent.name)));
 				if (dirent.isDirectory()) {
 					// ディレクトリなら配列に追加してチェック待ち
 					dirs.push(newpath);
 					reldirs.push(newrel);
 				} else if (dirent.isFile()) {
 					// ファイルならファイルリストに登録
-					this.inputFiles.set(newrel, new FileInfo(newpath, newrel));
+					this.inputFiles.set(key, new FileInfo(newpath, newrel));
 				}
 			}
+		}
+	}
+
+	public isChild(path: string) {
+		return (path.indexOf(this.rootPathStr) === 0);
+	}
+
+	public async getDiagnostic(path: string) {
+		// 相対パスを取得
+		const rel = posix.relative(this.rootPathStr, path);
+		// ファイル存在チェック
+		const key = posix.join(posix.dirname(rel), posix.basename(rel, posix.extname(rel)));
+		const file = this.inputFiles.get(key);
+		if (file) {
+			return file.getDiagnostic();
+		} else {
+			return null;
 		}
 	}
 
@@ -88,10 +161,10 @@ export class WorkspaceInfo {
 		let first = true;
 		for (const file of this.inputFiles) {
 			if (first) {
-				result += file[0];
+				result += `${file[0]}[${file[1].data}]`;
 				first = false;
 			} else {
-				result += `, ${file[0]}`;
+				result += `, ${file[0]}[${file[1].data}]`;
 			}
 		}
 		return result;
@@ -152,7 +225,12 @@ export class Diagnoser {
 		}
 	}
 
-	public loadInput() {
-
+	public async validate(doc: TextDocument) {
+		for (const ws of this._wsInfo) {
+			if (ws[1].isChild(doc.uri)) {
+				return ws[1].getDiagnostic(doc.uri);
+			}
+		}
+		return null;
 	}
 }
