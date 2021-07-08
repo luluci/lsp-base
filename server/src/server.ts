@@ -70,7 +70,7 @@ connection.onInitialized(() => {
 		connection.client.register(
 			DidChangeConfigurationNotification.type,
 			undefined
-		)
+		);
 	}
 	if (hasWorkspaceFolderCapability) {
 		connection.workspace.onDidChangeWorkspaceFolders((event) => {
@@ -83,12 +83,10 @@ connection.onInitialized(() => {
 	}
 
 	// 拡張機能周りの設定を初期化
-	initExtInfo();
-	// 入力ファイルを読み込み開始
-	
+	initExtensionInfo();
 });
 
-async function initExtInfo () {
+async function initExtensionInfo () {
 	// configuration取得
 	if (hasConfigurationCapability) {
 		const conf = await connection.workspace.getConfiguration();
@@ -106,8 +104,6 @@ async function initExtInfo () {
 	} else {
 		// Workspaceの設定が無い場合？　何かで初期化しないと
 	}
-
-	update();
 }
 
 connection.onDidChangeConfiguration((change) => {
@@ -138,6 +134,7 @@ async function validate(doc: TextDocument) {
 }
 
 documents.listen(connection);
+
 documents.onDidOpen((event) => {
 	validate(event.document);
 });
