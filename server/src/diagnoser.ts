@@ -90,8 +90,7 @@ export class WorkspaceInfo {
 	public rootPath: URI;
 	// 
 	public enableInput: boolean;
-	public inputPathStr: string;
-	public inputPath: URI;
+	public inputPaths: string[];
 	public inputFiles: Map<string,FileInfo>;
 
 	constructor(wsPath: URI) {
@@ -100,22 +99,53 @@ export class WorkspaceInfo {
 		// 
 		this.inputFiles = new Map<string, FileInfo>();
 		// インプットファイルディレクトリへのパスを作成
-		this.inputPathStr = path.join(this.rootPathStr, config.inputPath);
-		this.inputPath = URI.parse(this.inputPathStr);
-		if (fs.existsSync(this.inputPath.fsPath)) {
-			// インプットファイルディレクトリが存在するならロードする
-			this.enableInput = true;
-			this._loadInputFiles();
-		} else {
-			this.enableInput = false;
+		this.inputPaths = Array<string>();
+		this.enableInput = false;
+		this._checkInputFileDir();
+	}
+
+	private _checkInputFileDir() {
+		// 再帰にしないように配列に探索ディレクトリを追加
+		let dirs = new Array<string>();
+		dirs.push(this.rootPathStr);
+		// ディレクトリチェックパターン
+		const dirRegexStr = path.join(this.rootPathStr, config.inputPath).replace(/\\/g, '\\\\');
+		const dirRegex = new RegExp(dirRegexStr)
+		// 探索ディレクトリを順次チェック
+		for (let dirnum = 0; dirnum < dirs.length; dirnum++) {
+			// ディレクトリ内のディレクトリ/ファイルを取得
+			const dirents = fs.readdirSync(dirs[dirnum], { encoding: 'utf8', withFileTypes: true });
+			const basedir = dirs[dirnum];
+			// リストを全部チェック
+			for (const dirent of dirents) {
+				// 相対パスと絶対パスを作成
+				const newpath = path.join(basedir, dirent.name);
+				if (dirent.isDirectory()) {
+					// ディレクトリならインプットファイルディレクトリチェック
+					if (dirRegex.test(newpath)) {
+						// インプットファイルディレクトリなら存在チェック
+						if (fs.existsSync(newpath)) {
+							// インプットファイルディレクトリが存在するならロードする
+							const inputPath = URI.parse(newpath);
+							const inputPathStr = inputPath.fsPath;
+							this.inputPaths.push(inputPathStr);
+							this._loadInputFiles(inputPathStr);
+							this.enableInput = true;
+						}
+					} else {
+						// インプットファイルディレクトリでないなら配下ディレクトリを探索
+						dirs.push(newpath);
+					}
+				}
+			}
 		}
 	}
 
-	private _loadInputFiles() {
+	private _loadInputFiles(inputPath: string) {
 		// 再帰にしないように配列に探索ディレクトリを追加
 		let dirs = new Array<string>();
 		let reldirs = new Array<string>();
-		dirs.push(this.inputPath.fsPath);
+		dirs.push(inputPath);
 		reldirs.push('');
 		// 探索ディレクトリを順次チェック
 		for (let dirnum = 0; dirnum < dirs.length; dirnum++) {
@@ -126,7 +156,7 @@ export class WorkspaceInfo {
 			for (const dirent of dirents) {
 				// 相対パスと絶対パスを作成
 				const newrel = path.join(basedir, dirent.name);
-				const newpath = path.join(this.inputPath.fsPath, newrel);
+				const newpath = path.join(inputPath, newrel);
 				const ext = path.extname(dirent.name);
 				const key = path.join(basedir, path.basename(dirent.name, ext));
 				if (dirent.isDirectory()) {
@@ -147,7 +177,9 @@ export class WorkspaceInfo {
 		// インプットファイルを読み込めていなければ不可
 		if (!this.enableInput) return false;
 		// インプットファイルディレクトリ配下のファイルは対象外
-		if (path.fsPath.indexOf(this.inputPathStr) === 0) return false;
+		for (const inputDir of this.inputPaths) {
+			if (path.fsPath.indexOf(inputDir) === 0) return false;
+		}
 		// workspace配下のファイルを対象とする
 		return (path.fsPath.indexOf(this.rootPathStr) === 0);
 	}
