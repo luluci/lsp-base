@@ -2,20 +2,18 @@
 
 export class Config {
 	public inputPath: string;
+	public inputExt: string;
 	
 	constructor() {
 		this.inputPath = "";
+		this.inputExt = "";
 	}
 
 	public init(conf: any) {
-		this.inputPath = conf.lspbase.path.input;
+		this.inputPath = conf.lspbase.input.path;
+		this.inputExt = conf.lspbase.input.ext;
 	}
 
-	public getConf(): string {
-		let result: string = "conf:";
-		result += this.inputPath;
-		return result;
-	}
 }
 
 export let config = new Config();

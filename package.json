@@ -25,10 +25,15 @@
 		"configuration": {
 			"title": "lsp-base",
 			"properties": {
-				"lspbase.path.input": {
+				"lspbase.input.path": {
 					"type": "string",
 					"default": "hoge_analyzer",
 					"description": "入力ファイルのある場所"
+				},
+				"lspbase.input.ext": {
+					"type": "string",
+					"default": ".tsv",
+					"description": "入力ファイルの拡張子(.まで必要)"
 				}
 			}
 		}

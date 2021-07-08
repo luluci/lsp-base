@@ -1,7 +1,7 @@
 "use strict";
 
 import * as fs from 'fs';
-import { posix } from 'path';
+import * as path from 'path';
 import {
 	Diagnostic,
 	DiagnosticSeverity,
@@ -37,7 +37,7 @@ class FileInfo {
 	public absPath: string;
 	public relPath: string;
 	public data: string;
-	public diagnos: Map<number, DiagnosNode>;
+	public diagnos: DiagnosNode[];
 	// 
 	private _isLoading: Promise<void>;
 
@@ -45,7 +45,7 @@ class FileInfo {
 		this.absPath = absPath;
 		this.relPath = relPath;
 		this.data = '';
-		this.diagnos = new Map<number, DiagnosNode>();
+		this.diagnos = new Array<DiagnosNode>();
 		//
 		this._isLoading = this._readInput();
 	}
@@ -62,7 +62,7 @@ class FileInfo {
 				for (const line of lines) {
 					const diag = new DiagnosNode(line);
 					if (diag.line) {
-						self.diagnos.set(diag.line, diag);
+						self.diagnos.push(diag);
 					}
 				}
 			}
@@ -76,10 +76,10 @@ class FileInfo {
 		const diagnostics: Diagnostic[] = [];
 		for (const diag of this.diagnos) {
 			const range: Range = {
-				start: { line: diag[1].line!, character: diag[1].start! },
-				end: { line: diag[1].line!, character: diag[1].end! }
+				start: { line: diag.line!, character: diag.start! },
+				end: { line: diag.line!, character: diag.end! }
 			};
-			diagnostics.push(Diagnostic.create(range, diag[1].message!, DiagnosticSeverity.Warning, "", "lsp-base"));
+			diagnostics.push(Diagnostic.create(range, diag.message!, DiagnosticSeverity.Warning, "", "lsp-base"));
 		}
 		return diagnostics;
 	}
@@ -94,15 +94,16 @@ export class WorkspaceInfo {
 	public inputPath: URI;
 	public inputFiles: Map<string,FileInfo>;
 
-	constructor(wsPath: string) {
-		this.rootPathStr = wsPath;
-		this.rootPath = URI.parse(wsPath);
+	constructor(wsPath: URI) {
+		this.rootPath = wsPath;
+		this.rootPathStr = wsPath.fsPath;
 		// 
 		this.inputFiles = new Map<string, FileInfo>();
-		//
-		this.inputPathStr = posix.join(wsPath, config.inputPath);
+		// インプットファイルディレクトリへのパスを作成
+		this.inputPathStr = path.join(this.rootPathStr, config.inputPath);
 		this.inputPath = URI.parse(this.inputPathStr);
 		if (fs.existsSync(this.inputPath.fsPath)) {
+			// インプットファイルディレクトリが存在するならロードする
 			this.enableInput = true;
 			this._loadInputFiles();
 		} else {
@@ -124,30 +125,38 @@ export class WorkspaceInfo {
 			// リストを全部チェック
 			for (const dirent of dirents) {
 				// 相対パスと絶対パスを作成
-				const newrel = posix.join(basedir, dirent.name);
-				const newpath = posix.join(this.inputPath.fsPath, newrel);
-				const key = posix.join(basedir, posix.basename(dirent.name, posix.extname(dirent.name)));
+				const newrel = path.join(basedir, dirent.name);
+				const newpath = path.join(this.inputPath.fsPath, newrel);
+				const ext = path.extname(dirent.name);
+				const key = path.join(basedir, path.basename(dirent.name, ext));
 				if (dirent.isDirectory()) {
 					// ディレクトリなら配列に追加してチェック待ち
 					dirs.push(newpath);
 					reldirs.push(newrel);
 				} else if (dirent.isFile()) {
-					// ファイルならファイルリストに登録
-					this.inputFiles.set(key, new FileInfo(newpath, newrel));
+					if (ext === config.inputExt) {
+						// ファイルならファイルリストに登録
+						this.inputFiles.set(key, new FileInfo(newpath, newrel));
+					}
 				}
 			}
 		}
 	}
 
-	public isChild(path: string) {
-		return (path.indexOf(this.rootPathStr) === 0);
+	public hasDiagnostic(path: URI): boolean {
+		// インプットファイルを読み込めていなければ不可
+		if (!this.enableInput) return false;
+		// インプットファイルディレクトリ配下のファイルは対象外
+		if (path.fsPath.indexOf(this.inputPathStr) === 0) return false;
+		// workspace配下のファイルを対象とする
+		return (path.fsPath.indexOf(this.rootPathStr) === 0);
 	}
 
-	public async getDiagnostic(path: string) {
+	public async getDiagnostic(uri: URI) {
 		// 相対パスを取得
-		const rel = posix.relative(this.rootPathStr, path);
+		const rel = path.relative(this.rootPathStr, uri.fsPath);
 		// ファイル存在チェック
-		const key = posix.join(posix.dirname(rel), posix.basename(rel, posix.extname(rel)));
+		const key = path.join(path.dirname(rel), path.basename(rel, path.extname(rel)));
 		const file = this.inputFiles.get(key);
 		if (file) {
 			return file.getDiagnostic();
@@ -156,50 +165,14 @@ export class WorkspaceInfo {
 		}
 	}
 
-	public dbgGetList(): string {
-		let result = '';
-		let first = true;
-		for (const file of this.inputFiles) {
-			if (first) {
-				result += `${file[0]}[${file[1].data}]`;
-				first = false;
-			} else {
-				result += `, ${file[0]}[${file[1].data}]`;
-			}
-		}
-		return result;
-	}
 }
 
 
 export class Diagnoser {
-	private _wsInfo: Map<string, WorkspaceInfo>;
+	private _wsInfo: Map<URI, WorkspaceInfo>;
 	
 	constructor() {
-		this._wsInfo = new Map<string, WorkspaceInfo>();
-	}
-
-	public getWSListStr(): string {
-		let result = "workspace:";
-		let first = true;
-		for (const ws of this._wsInfo) {
-			if (ws[1].enableInput) {
-				if (first) {
-					result += `${ws[1].inputPath.fsPath}(${ws[1].dbgGetList()})`;
-					first = false;
-				} else {
-					result += `, ${ws[1].inputPath.fsPath}(${ws[1].dbgGetList()})`;
-				}
-			} else {
-				if (first) {
-					result += "NoInput!";
-					first = false;
-				} else {
-					result += `, NoInput!`;
-				}
-			}
-		}
-		return result;
+		this._wsInfo = new Map<URI, WorkspaceInfo>();
 	}
 
 	public initWorkspaces(wss: WorkspaceFolder[]) {
@@ -213,22 +186,25 @@ export class Diagnoser {
 
 	private _deleteWorkspaces(wss: WorkspaceFolder[]) {
 		for (const ws of wss) {
-			this._wsInfo.delete((ws.uri));
+			const uri = URI.parse(ws.uri);
+			this._wsInfo.delete(uri);
 		}
 	}
 
 	private _addWorkspaces(wss: WorkspaceFolder[]) {
 		for (const ws of wss) {
 			// WorkspaceInfoインスタンス作成
-			const wsInfo = new WorkspaceInfo(ws.uri);
-			this._wsInfo.set(ws.uri, wsInfo);
+			const uri = URI.parse(ws.uri);
+			const wsInfo = new WorkspaceInfo(uri);
+			this._wsInfo.set(uri, wsInfo);
 		}
 	}
 
 	public async validate(doc: TextDocument) {
 		for (const ws of this._wsInfo) {
-			if (ws[1].isChild(doc.uri)) {
-				return ws[1].getDiagnostic(doc.uri);
+			const uri = URI.parse(doc.uri);
+			if (ws[1].hasDiagnostic(uri)) {
+				return ws[1].getDiagnostic(uri);
 			}
 		}
 		return null;
