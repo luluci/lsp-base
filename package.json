@@ -20,10 +20,17 @@
 		"onLanguage:c",
 		"onLanguage:cpp",
 		"onLanguage:plaintext",
-		"onLanguage:markdown"
+		"onLanguage:markdown",
+		"onCommand:lsp-base.start"
 	],
 	"main": "./client/out/extension",
 	"contributes": {
+		"commands": [
+			{
+				"command": "lsp-base.start",
+				"title": "Start lsp-base"
+			}
+		],
 		"configuration": {
 			"title": "lsp-base",
 			"properties": {
