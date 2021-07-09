@@ -15,11 +15,20 @@ export function activate(context: ExtensionContext): void {
 			options: debugOptions,
 		},
 	};
+	// https://code.visualstudio.com/api/references/activation-events
 	const clientOptions: LanguageClientOptions = {
 		documentSelector: [
 			{
 				scheme: "file",
 				language: "plaintext",
+			},
+			{
+				scheme: "file",
+				language: "c",
+			},
+			{
+				scheme: "file",
+				language: "cpp",
 			},
 			{
 				scheme: "file",

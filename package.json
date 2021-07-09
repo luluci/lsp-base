@@ -17,6 +17,8 @@
 		"Formatters"
 	],
 	"activationEvents": [
+		"onLanguage:c",
+		"onLanguage:cpp",
 		"onLanguage:plaintext",
 		"onLanguage:markdown"
 	],
