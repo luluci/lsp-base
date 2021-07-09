@@ -51,25 +51,20 @@ class FileInfo {
 	}
 
 	private async _readInput() {
-		const self = this;
-		fs.readFile(this.absPath, { encoding:'utf8' }, (err,data)=>{
-			if (err) {
-				//
-				throw err;
-			} else {
-				// tsv解析
-				const lines = data.split(/\r\n|\n/);
-				for (const line of lines) {
-					const diag = new DiagnosNode(line);
-					if (diag.line) {
-						self.diagnos.push(diag);
-					}
-				}
+		// 
+		const content = await fs.promises.readFile(this.absPath, { encoding: 'utf8' });
+		// tsv解析
+		const lines = content.split(/\r\n|\n/);
+		for (const line of lines) {
+			const diag = new DiagnosNode(line);
+			if (diag.line) {
+				this.diagnos.push(diag);
 			}
-		});
+		}
 	}
 
-	public async getDiagnostic() {
+	public async getDiagnostic(doc: TextDocument) {
+		doc;
 		// 入力ファイルの読み込みが終わったらDiagnosticを作成する
 		await this._isLoading;
 		//
@@ -126,10 +121,8 @@ export class WorkspaceInfo {
 						// インプットファイルディレクトリなら存在チェック
 						if (fs.existsSync(newpath)) {
 							// インプットファイルディレクトリが存在するならロードする
-							const inputPath = URI.parse(newpath);
-							const inputPathStr = inputPath.fsPath;
-							this.inputPaths.push(inputPathStr);
-							this._loadInputFiles(inputPathStr);
+							this.inputPaths.push(newpath);
+							this._loadInputFiles(newpath);
 							this.enableInput = true;
 						}
 					} else {
@@ -184,14 +177,14 @@ export class WorkspaceInfo {
 		return (path.fsPath.indexOf(this.rootPathStr) === 0);
 	}
 
-	public async getDiagnostic(uri: URI) {
+	public async getDiagnostic(doc: TextDocument, uri: URI) {
 		// 相対パスを取得
 		const rel = path.relative(this.rootPathStr, uri.fsPath);
 		// ファイル存在チェック
 		const key = path.join(path.dirname(rel), path.basename(rel, path.extname(rel)));
 		const file = this.inputFiles.get(key);
 		if (file) {
-			return file.getDiagnostic();
+			return file.getDiagnostic(doc);
 		} else {
 			return null;
 		}
@@ -236,7 +229,7 @@ export class Diagnoser {
 		for (const ws of this._wsInfo) {
 			const uri = URI.parse(doc.uri);
 			if (ws[1].hasDiagnostic(uri)) {
-				return ws[1].getDiagnostic(uri);
+				return ws[1].getDiagnostic(doc, uri);
 			}
 		}
 		return null;

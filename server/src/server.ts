@@ -104,6 +104,8 @@ async function initExtensionInfo () {
 	} else {
 		// Workspaceの設定が無い場合？　何かで初期化しないと
 	}
+
+	update();
 }
 
 connection.onDidChangeConfiguration((change) => {
