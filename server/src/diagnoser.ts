@@ -11,6 +11,7 @@ import {
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { URI } from 'vscode-uri';
+import * as iconv from 'iconv-lite';
 
 import { config } from './config';
 
@@ -51,10 +52,12 @@ class FileInfo {
 	}
 
 	private async _readInput() {
-		// 
-		const content = await fs.promises.readFile(this.absPath, { encoding: 'utf8' });
+		//const content = await fs.promises.readFile(this.absPath, { encoding: 'utf8' });
+		//const lines = content.split(/\r\n|\n/);
+		const content = await fs.promises.readFile(this.absPath);
+		const buffer = iconv.decode(content, "sjis");
+		const lines = buffer.split(/\r\n|\n/);
 		// tsv解析
-		const lines = content.split(/\r\n|\n/);
 		for (const line of lines) {
 			const diag = new DiagnosNode(line);
 			if (diag.line) {
