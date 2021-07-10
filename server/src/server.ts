@@ -108,13 +108,24 @@ async function initExtensionInfo () {
 	update();
 }
 
-connection.onDidChangeConfiguration((change) => {
-	if (change.settings) {
-		//change.settings: vscode.WorkspaceConfiguration;
-		config.init(change.settings);
-		update();
-	}
+connection.onDidChangeConfiguration(async (change) => {
+	//change.settings: vscode.WorkspaceConfiguration;
+	change;
+	await updateConfig();
+	diagnoser.reload();
+	update();
 });
+
+async function updateConfig() {
+	// configuration取得
+	if (hasConfigurationCapability) {
+		const conf = await connection.workspace.getConfiguration();
+		if (conf) {
+			//value: vscode.WorkspaceConfiguration;
+			config.init(conf);
+		}
+	}
+}
 
 /**
  * Diagnoseをすべて更新する

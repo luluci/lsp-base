@@ -66,6 +66,10 @@ class FileInfo {
 		}
 	}
 
+	public clearDiagnostic() {
+		this.diagnos = [];
+	}
+
 	public async getDiagnostic(doc: TextDocument) {
 		doc;
 		// 入力ファイルの読み込みが終わったらDiagnosticを作成する
@@ -169,6 +173,13 @@ export class WorkspaceInfo {
 		}
 	}
 
+	public reload() {
+		for (const fileinf of this.inputFiles) {
+			fileinf[1].clearDiagnostic();
+		}
+		this._checkInputFileDir();
+	}
+
 	public hasDiagnostic(path: URI): boolean {
 		// インプットファイルを読み込めていなければ不可
 		if (!this.enableInput) return false;
@@ -225,6 +236,13 @@ export class Diagnoser {
 			const uri = URI.parse(ws.uri);
 			const wsInfo = new WorkspaceInfo(uri);
 			this._wsInfo.set(uri, wsInfo);
+		}
+	}
+
+	public reload() {
+		// インプットファイルを再読み込み
+		for (const ws of this._wsInfo) {
+			ws[1].reload();
 		}
 	}
 
