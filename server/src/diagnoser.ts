@@ -35,26 +35,28 @@ class DiagnosNode {
 
 
 class FileInfo {
-	public absPath: string;
 	public relPath: string;
 	public data: string;
 	public diagnos: DiagnosNode[];
 	// 
-	private _isLoading: Promise<void>;
+	private _isLoading: Promise<void>[];
 
-	constructor(absPath:string, relPath:string) {
-		this.absPath = absPath;
+	constructor(relPath:string) {
 		this.relPath = relPath;
 		this.data = '';
 		this.diagnos = new Array<DiagnosNode>();
 		//
-		this._isLoading = this._readInput();
+		this._isLoading = [];
 	}
 
-	private async _readInput() {
+	public loadInput(inputFile: string) {
+		this._isLoading.push(this._loadInput(inputFile));
+	}
+
+	private async _loadInput(inputFile: string) {
 		//const content = await fs.promises.readFile(this.absPath, { encoding: 'utf8' });
 		//const lines = content.split(/\r\n|\n/);
-		const content = await fs.promises.readFile(this.absPath);
+		const content = await fs.promises.readFile(inputFile);
 		const buffer = iconv.decode(content, "sjis");
 		const lines = buffer.split(/\r\n|\n/);
 		// tsv解析
@@ -70,10 +72,15 @@ class FileInfo {
 		this.diagnos = [];
 	}
 
+	public async waitLoading() {
+		await Promise.all(this._isLoading).then(()=>{ undefined });
+		this._isLoading = [];
+	}
+
 	public async getDiagnostic(doc: TextDocument) {
 		doc;
 		// 入力ファイルの読み込みが終わったらDiagnosticを作成する
-		await this._isLoading;
+		await this.waitLoading();
 		//
 		const diagnostics: Diagnostic[] = [];
 		for (const diag of this.diagnos) {
@@ -165,8 +172,16 @@ export class WorkspaceInfo {
 					reldirs.push(newrel);
 				} else if (dirent.isFile()) {
 					if (ext === config.inputExt) {
-						// ファイルならファイルリストに登録
-						this.inputFiles.set(key, new FileInfo(newpath, newrel));
+						// 読み込み対象ファイルなら
+						let finfo = this.inputFiles.get(key);
+						if (finfo === undefined) {
+							// FileInfo未作成なら作成
+							// ファイルリストに登録
+							finfo = new FileInfo(newrel);
+							this.inputFiles.set(key, finfo);
+						}
+						// インプットファイルロード
+						finfo.loadInput(newpath);
 					}
 				}
 			}
