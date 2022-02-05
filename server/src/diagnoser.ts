@@ -15,6 +15,31 @@ import * as iconv from 'iconv-lite';
 
 import { config } from './config';
 
+interface IConsole {
+	error(message: string): void;
+	warn(message: string): void;
+	info(message: string): void;
+	log(message: string): void;
+}
+class DummyConsole implements IConsole {
+	public error(message: string): void {
+		// dummy
+		message;
+	}
+	public warn(message: string): void {
+		// dummy
+		message;
+	}
+	public info(message: string): void {
+		// dummy
+		message;
+	}
+	public log(message: string): void {
+		// dummy
+		message;
+	}
+}
+let console: IConsole = new DummyConsole();
 
 class DiagnosNode {
 	public line?: number;
@@ -213,8 +238,10 @@ export class WorkspaceInfo {
 		const key = path.join(path.dirname(rel), path.basename(rel, path.extname(rel)));
 		const file = this.inputFiles.get(key);
 		if (file) {
+			console.log(`Start load Diagnostic from ${key}`);
 			return file.getDiagnostic(doc);
 		} else {
+			console.log(`File not found: ${key}`);
 			return null;
 		}
 	}
@@ -227,6 +254,10 @@ export class Diagnoser {
 	
 	constructor() {
 		this._wsInfo = new Map<URI, WorkspaceInfo>();
+	}
+
+	public init<T extends IConsole>(c: T){
+		console = c;
 	}
 
 	public initWorkspaces(wss: WorkspaceFolder[]) {

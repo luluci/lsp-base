@@ -24,7 +24,7 @@ namespace CommandIDs {
 // Create a connection for the server. The connection uses Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
 const connection = createConnection(ProposedFeatures.all);
-connection.console.info(`Sample server running in node ${process.version}`);
+connection.console.info(`lsp-base server running in node ${process.version}`);
 //let documents!: TextDocuments<TextDocument>;
 let documents = new TextDocuments(TextDocument);
 
@@ -33,6 +33,7 @@ let hasWorkspaceFolderCapability: boolean = false;
 let hasDiagnosticRelatedInformationCapability: boolean = false;
 
 let diagnoser = new Diagnoser();
+diagnoser.init(connection.console);
 
 connection.onInitialize((params: InitializeParams) => {
 	let capabilities = params.capabilities;
