@@ -144,7 +144,13 @@ export class WorkspaceInfo {
 		dirs.push(this.rootPathStr);
 		// ディレクトリチェックパターン
 		const dirRegexStr = path.join(this.rootPathStr, config.inputPath).replace(/\\/g, '\\\\');
-		const dirRegex = new RegExp(dirRegexStr)
+		let dirRegex: RegExp;
+		try {
+			dirRegex = new RegExp(dirRegexStr);
+		} catch (e) {
+			console.log(`Invalid InputPath: ${config.inputPath}`);
+			return;
+		}
 		// 探索ディレクトリを順次チェック
 		for (let dirnum = 0; dirnum < dirs.length; dirnum++) {
 			// ディレクトリ内のディレクトリ/ファイルを取得
