@@ -3,10 +3,12 @@
 export class Config {
 	public inputPath: string;
 	public inputExt: string;
+	public source: string;
 	
 	constructor() {
 		this.inputPath = "";
 		this.inputExt = "";
+		this.source = "lsp-base";
 	}
 
 	public init(conf: any) {

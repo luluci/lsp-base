@@ -42,10 +42,10 @@ class DummyConsole implements IConsole {
 let console: IConsole = new DummyConsole();
 
 class DiagnosNode {
-	public line?: number;
-	public start?: number;
-	public end?: number;
-	public message?: string;
+	public line: number;
+	public start: number;
+	public end: number;
+	public message: string;
 
 	constructor(line: string) {
 		const parts = line.split('\t');
@@ -54,6 +54,11 @@ class DiagnosNode {
 			this.start = parseInt(parts[1], 10);
 			this.end = this.start;
 			this.message = parts[2];
+		} else {
+			this.line = -1;
+			this.start = -1;
+			this.end = -1;
+			this.message = "Null";
 		}
 	}
 }
@@ -87,7 +92,7 @@ class FileInfo {
 		// tsv解析
 		for (const line of lines) {
 			const diag = new DiagnosNode(line);
-			if (diag.line) {
+			if (diag.line !== -1) {
 				this.diagnos.push(diag);
 			}
 		}
@@ -103,17 +108,31 @@ class FileInfo {
 	}
 
 	public async getDiagnostic(doc: TextDocument) {
-		doc;
 		// 入力ファイルの読み込みが終わったらDiagnosticを作成する
 		await this.waitLoading();
+		// ドキュメントを1行ごとに分割
+		const text = doc.getText();
+		const lines = text.split(/\r\n|\n/);
+		//console.log(`text: ${lines[2]}`);
 		//
 		const diagnostics: Diagnostic[] = [];
-		for (const diag of this.diagnos) {
+		// 個別作成メッセージ
+		if (this.diagnos.length > 0) {
 			const range: Range = {
-				start: { line: diag.line!, character: diag.start! },
-				end: { line: diag.line!, character: diag.end! }
+				start: { line: 0, character: 0 },
+				end: { line: 0, character: 0 }
 			};
-			diagnostics.push(Diagnostic.create(range, diag.message!, DiagnosticSeverity.Warning, "", "lsp-base"));
+			diagnostics.push(Diagnostic.create(range, "警告あり", DiagnosticSeverity.Warning, "", config.source));
+		}
+		// 入力ファイルの警告を指定箇所にセット
+		for (const diag of this.diagnos) {
+			const line = diag.line;
+			//console.log(`line: ${line}`);
+			const range: Range = {
+				start: { line: line, character: diag.start },
+				end: { line: line, character: diag.end }
+			};
+			diagnostics.push(Diagnostic.create(range, diag.message + "[" + lines[line], DiagnosticSeverity.Warning, "", config.source));
 		}
 		return diagnostics;
 	}

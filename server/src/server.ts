@@ -2,6 +2,7 @@
 
 //import * as vscode from 'vscode';
 import {
+	CodeAction,
 	CodeActionKind,
 	createConnection,
 //	Diagnostic,
@@ -24,7 +25,7 @@ namespace CommandIDs {
 // Create a connection for the server. The connection uses Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
 const connection = createConnection(ProposedFeatures.all);
-connection.console.info(`lsp-base server running in node ${process.version}`);
+connection.console.info(`${config.source} server running in node ${process.version}`);
 //let documents!: TextDocuments<TextDocument>;
 let documents = new TextDocuments(TextDocument);
 
@@ -56,8 +57,10 @@ connection.onInitialize((params: InitializeParams) => {
 					includeText: false,
 				},
 			},
+			// CodeActionが不要なときはコメントアウトする
 			codeActionProvider: {
-				codeActionKinds: [CodeActionKind.QuickFix],
+				//codeActionKinds: [CodeActionKind.QuickFix],
+				codeActionKinds: [CodeActionKind.Empty],
 			},
 			executeCommandProvider: {
 				commands: [CommandIDs.fix],
@@ -109,6 +112,11 @@ async function initExtensionInfo () {
 	update();
 }
 
+connection.onCodeAction(async (_) => {
+	const codeActions: CodeAction[] = [];
+	return codeActions;
+});
+
 connection.onDidChangeConfiguration(async (change) => {
 	//change.settings: vscode.WorkspaceConfiguration;
 	change;
@@ -158,13 +166,14 @@ documents.onDidChangeContent((change) => {
 });
 
 documents.onDidSave((event) => {
-	event
+	// ファイル保存時
+	// 何もしない
+	event;
 });
 
 documents.onDidClose((close) => {
 	connection.sendDiagnostics({ uri: close.document.uri, diagnostics: []});
 });
-
 
 // Make the text document manager listen on the connection
 // for open, change and close text document events
